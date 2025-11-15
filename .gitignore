@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Env files
+.env
+.env.*
+
+# TypeScript tooling caches
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Misc
+dist/
+coverage/
+
