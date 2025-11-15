@@ -140,29 +140,33 @@ Because fulfillment is synchronous, your contract’s `fulfillRandomWords` handl
 
 Use the pre-deployed coordinator above, then deploy just your consumer and exercise the flow. Export `MONAD_RPC_URL` and `PRIVATE_KEY_EVM` as shown in `.env.example` before running anything.
 
-```bash
-# 1. Deploy the consumer PoC (requests 10 words, exposes a dice roll 1-6)
-export KEY_HASH=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-export COORD_ADDR=0x6c657dC4e4823EBCCd2d9DCde3ef5bEb08914b3F
+1. **Deploy the consumer PoC (requests 10 words, exposes a dice roll 1–6).**
+   ```bash
+   export KEY_HASH=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+   export COORD_ADDR=0x6c657dC4e4823EBCCd2d9DCde3ef5bEb08914b3F
 
-forge create contracts/src/mocks/MockVRFConsumer.sol:MockVRFConsumer \
-  --rpc-url $MONAD_RPC_URL \
-  --private-key $PRIVATE_KEY_EVM \
-  --broadcast \
-  --constructor-args $COORD_ADDR $KEY_HASH 1 3 200000 10
+   forge create contracts/src/mocks/MockVRFConsumer.sol:MockVRFConsumer \
+     --rpc-url $MONAD_RPC_URL \
+     --private-key $PRIVATE_KEY_EVM \
+     --broadcast \
+     --constructor-args $COORD_ADDR $KEY_HASH 1 3 200000 10
+   ```
 
-# 2. Trigger a randomness request (fulfillment occurs inside this tx)
-export CONSUMER=<consumer address from step 1>
+2. **Trigger a randomness request (fulfillment occurs inside this tx).**
+   ```bash
+   export CONSUMER=<consumer address from step 1>
 
-cast send $CONSUMER "requestRandomness()" \
-  --rpc-url $MONAD_RPC_URL \
-  --private-key $PRIVATE_KEY_EVM \
-  --broadcast
+   cast send $CONSUMER "requestRandomness()" \
+     --rpc-url $MONAD_RPC_URL \
+     --private-key $PRIVATE_KEY_EVM \
+     --broadcast
+   ```
 
-# 3. Inspect the results (dice roll + raw words)
-cast call $CONSUMER "latestDiceRollResult()" --rpc-url $MONAD_RPC_URL
-cast call $CONSUMER "lastRandomWords(uint256)" 0 --rpc-url $MONAD_RPC_URL
-```
+3. **Inspect the results (dice roll + raw words).**
+   ```bash
+   cast call $CONSUMER "latestDiceRollResult()" --rpc-url $MONAD_RPC_URL
+   cast call $CONSUMER "lastRandomWords(uint256)" 0 --rpc-url $MONAD_RPC_URL
+   ```
 
 Every invocation of `requestRandomness()` returns a fresh dice value (1–6) plus the raw `uint256` words, all while using the exact VRF consumer interface you’ll use on mainnet. Again, keep this mock strictly to dev/test environments.
 
