@@ -170,4 +170,70 @@ Use the pre-deployed coordinator above, then deploy just your consumer and exerc
 
 Every invocation of `requestRandomness()` returns a fresh dice value (1–6) plus the raw `uint256` words, all while using the exact VRF consumer interface you’ll use on mainnet. Again, keep this mock strictly to dev/test environments.
 
+---
+
+---
+
+## CCIP Native MON Demo (Monad → Sepolia)
+
+Use the boilerplate CCIP contracts under `contracts/src/mocks/` to send a string payload from Monad testnet to Sepolia while paying CCIP fees in native MON. The steps below assume you have `.env` populated with the addresses included in `.env.example`.
+
+1. **Load environment variables.**
+   ```bash
+   source .env
+   ```
+
+2. **Deploy the sender on Monad (pays fees in MON).**
+   ```bash
+   forge create contracts/src/mocks/MockCCIPSender.sol:Sender \
+     --rpc-url $MONAD_RPC_URL \
+     --private-key $PRIVATE_KEY_EVM \
+     --broadcast \
+     --constructor-args $MONAD_ROUTER_ADDR
+   export MONAD_SENDER_ADDR=<address returned by forge>
+   ```
+
+3. **Fund the sender (optional if you plan to fund inline).**
+   ```bash
+   cast send $MONAD_SENDER_ADDR \
+     --rpc-url $MONAD_RPC_URL \
+     --private-key $PRIVATE_KEY_EVM \
+     --value 1ether
+   ```
+   (You can skip this if you will pass `--value` when calling `sendMessage`.)
+
+4. **Deploy the receiver on the destination chain (Sepolia).**
+   ```bash
+   forge create contracts/src/mocks/MockCCIPReceiver.sol:MockCCIPReceiver \
+     --rpc-url $DEST_RPC_URL \
+     --private-key $PRIVATE_KEY_EVM \
+     --broadcast \
+     --constructor-args $DEST_ROUTER_ADDR
+   export DEST_RECEIVER_ADDR=<address returned by forge>
+   ```
+
+5. **Send a CCIP message, paying fees in native MON.** `sendMessage` is `payable`, so `--value` both funds the contract and lets it forward the exact router quote via `{value: fees}`.
+   ```bash
+   cast send $MONAD_SENDER_ADDR \
+     "sendMessage(uint64,address,string)" \
+     $DEST_CHAIN_SELECTOR \
+     $DEST_RECEIVER_ADDR \
+     "Hello from Monad Blitz" \
+     --rpc-url $MONAD_RPC_URL \
+     --private-key $PRIVATE_KEY_EVM \
+     --value 1ether \
+     --gas-limit 500000
+   ```
+
+6. **Verify delivery on the destination chain.**
+   ```bash
+   cast call $DEST_RECEIVER_ADDR \
+     "getLastReceivedMessageDetails()(bytes32,string)" \
+     --rpc-url $DEST_RPC_URL
+   # or inspect `MessageReceived` logs:
+   cast logs --rpc-url $DEST_RPC_URL --address $DEST_RECEIVER_ADDR
+   ```
+
+This flow mirrors the CCIP “request and receive” cycle documented by Chainlink: the sender requests a cross-chain message (paying MON fees), the router forwards it to Sepolia, and the receiver emits `MessageReceived` once the payload lands.
+
 
