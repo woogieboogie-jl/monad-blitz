@@ -71,10 +71,6 @@ The script:
 
 Use it as a reference for integrating Data Streams into Monad projects or for demonstrating how reports look before submitting them to an on-chain verifier/oracle.
 
----
-
----
-
 ## Next Steps: On-chain Verification
 
 When you’re ready to prove these reports on-chain, follow Chainlink’s official walkthrough for deploying a `ClientReportsVerifier` contract, funding it with LINK, and calling `verifyReport` on an EVM network. The tutorial covers fee handling, supported report schemas, and verifier proxy addresses:
@@ -82,6 +78,10 @@ When you’re ready to prove these reports on-chain, follow Chainlink’s offici
 - [Verify report data onchain (EVM)](https://docs.chain.link/data-streams/tutorials/evm-onchain-report-verification)
 
 You can treat this repository as the “off-chain observability” half of that flow: stream and inspect reports with `monad-blitz`, then push the same `report.fullReport` bytes into the verifier contract described in the guide to complete the end-to-end demo.
+
+---
+
+---
 
 
 
@@ -94,6 +94,14 @@ You can treat this repository as the “off-chain observability” half of that 
 
 The repo also includes a tiny Foundry workspace (`contracts/`) with `MockVRFCoordinator`, a synchronous stand-in for `VRFCoordinatorV2`. It keeps the exact same `requestRandomWords` signature but fulfills immediately inside the same transaction using blockhash-derived randomness, so no background listener or subscription UI is required.
 
+### Pre-deployed mock coordinator (testnet only)
+
+| Network       | Chain ID | Coordinator Address                             | Notes                            |
+| ------------- | -------- | ----------------------------------------------- | -------------------------------- |
+| Monad testnet | 10143    | `0x6c657dC4e4823EBCCd2d9DCde3ef5bEb08914b3F`     | Interface validation only (no prod) |
+
+> ⚠️ This contract is for smoke-testing VRF integrations. It has **zero guarantees** and should never be used with mainnet assets or production workloads.
+
 ### Build & deploy
 
 ```bash
@@ -103,12 +111,9 @@ foundryup
 
 # Compile from repo root
 forge build
-
-# Deploy
-forge create contracts/src/mocks/MockVRFCoordinator.sol:MockVRFCoordinator \
-  --rpc-url $RPC_URL \
-  --private-key $DEPLOYER_PK
 ```
+
+> Align your environment variable names with `.env.example` (e.g., `MONAD_RPC_URL`, `PRIVATE_KEY_EVM`) before running the commands below.
 
 ### Usage flow
 
@@ -133,37 +138,32 @@ Because fulfillment is synchronous, your contract’s `fulfillRandomWords` handl
 
 ### Monad testnet demo (interface-only, not production)
 
-Use these commands to deploy the mock pair on Monad testnet, exercise the request/fulfill flow, and read the dice output. Replace `$MONAD_RPC` with your endpoint and `$PK` with a funded testnet key. This mock is **for interface validation only**—do not ship it to production.
+Use the pre-deployed coordinator above, then deploy just your consumer and exercise the flow. Export `MONAD_RPC_URL` and `PRIVATE_KEY_EVM` as shown in `.env.example` before running anything.
 
 ```bash
-# 1. Deploy the mock coordinator (save the printed address)
-forge create contracts/src/mocks/MockVRFCoordinator.sol:MockVRFCoordinator \
-  --rpc-url $MONAD_RPC \
-  --private-key $PK \
-  --broadcast
-
-# 2. Deploy the consumer PoC (requests 10 words, exposes a dice roll 1-6)
+# 1. Deploy the consumer PoC (requests 10 words, exposes a dice roll 1-6)
 export KEY_HASH=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-export COORD_ADDR=<coordinator address from step 1>
+export COORD_ADDR=0x6c657dC4e4823EBCCd2d9DCde3ef5bEb08914b3F
 
 forge create contracts/src/mocks/MockVRFConsumer.sol:MockVRFConsumer \
-  --rpc-url $MONAD_RPC \
-  --private-key $PK \
+  --rpc-url $MONAD_RPC_URL \
+  --private-key $PRIVATE_KEY_EVM \
   --broadcast \
   --constructor-args $COORD_ADDR $KEY_HASH 1 3 200000 10
 
-# 3. Trigger a randomness request (fulfillment occurs inside this tx)
-export CONSUMER=<consumer address from step 2>
+# 2. Trigger a randomness request (fulfillment occurs inside this tx)
+export CONSUMER=<consumer address from step 1>
 
 cast send $CONSUMER "requestRandomness()" \
-  --rpc-url $MONAD_RPC \
-  --private-key $PK \
+  --rpc-url $MONAD_RPC_URL \
+  --private-key $PRIVATE_KEY_EVM \
   --broadcast
 
-# 4. Inspect the results (dice roll + raw words)
-cast call $CONSUMER "latestDiceRollResult()" --rpc-url $MONAD_RPC
-cast call $CONSUMER "lastRandomWords(uint256)" 0 --rpc-url $MONAD_RPC
+# 3. Inspect the results (dice roll + raw words)
+cast call $CONSUMER "latestDiceRollResult()" --rpc-url $MONAD_RPC_URL
+cast call $CONSUMER "lastRandomWords(uint256)" 0 --rpc-url $MONAD_RPC_URL
 ```
 
 Every invocation of `requestRandomness()` returns a fresh dice value (1–6) plus the raw `uint256` words, all while using the exact VRF consumer interface you’ll use on mainnet. Again, keep this mock strictly to dev/test environments.
+
 
