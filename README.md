@@ -71,3 +71,11 @@ The script:
 
 Use it as a reference for integrating Data Streams into Monad projects or for demonstrating how reports look before submitting them to an on-chain verifier/oracle.
 
+## Next Steps: On-chain Verification
+
+When you’re ready to prove these reports on-chain, follow Chainlink’s official walkthrough for deploying a `ClientReportsVerifier` contract, funding it with LINK, and calling `verifyReport` on an EVM network. The tutorial covers fee handling, supported report schemas, and verifier proxy addresses:
+
+- [Verify report data onchain (EVM)](https://docs.chain.link/data-streams/tutorials/evm-onchain-report-verification)
+
+You can treat this repository as the “off-chain observability” half of that flow: stream and inspect reports with `monad-blitz`, then push the same `report.fullReport` bytes into the verifier contract described in the guide to complete the end-to-end demo.
+
