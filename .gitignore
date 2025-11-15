@@ -16,4 +16,7 @@ yarn-error.log*
 # Misc
 dist/
 coverage/
+cache/
+contracts/out/
+contracts/cache/
 
